@@ -2,13 +2,13 @@
 
 # : ========================================================================================================================================================
 
-
-# app
   ui_app = tablerDashPage(
 
     navbar = tablerDashNav(
       id = "mymenu",
-      src = "milanimal_logo.png",
+      src = "milanimal.jpg",
+
+    # NAV MENU ------------------------------------------------
 
     tablerNavMenu(
         tablerNavMenuItem(
@@ -22,21 +22,24 @@
           "Customers"
       ),
         tablerNavMenuItem(
-          tabName = "Lessons",
-          icon = "calendar",
-          "Lessons"
-      ),
-        tablerNavMenuItem(
           tabName = "Subscriptions",
           icon = "list",
           "Subscriptions"
       ),
         tablerNavMenuItem(
+          tabName = "Lessons",
+          icon = "calendar",
+          "Lessons"
+      ),
+        tablerNavMenuItem(
           tabName = "Automations",
           icon = "box",
-          "Subscriptions"
+          "Automations"
       )
     ),
+
+        # NAV RIGHT ------------------------------------------------
+
       tablerDropdown(
         tablerDropdownItem(
           title = "Item 1 title",
@@ -57,9 +60,13 @@
       )
     ),
 
+   # TITLE ------------------------------------------------
+
     title = "Digital Brain",
     enable_preloader = TRUE,
     loading_duration = 2,
+
+    # BODY ------------------------------------------------
 
     body = tablerDashBody(
 #      chooseSliderSkin("Modern"),
@@ -68,15 +75,29 @@
         tablerTabItem(
           tabName = "Home",
           fluidRow(
-            'PLACEHOLDER 1'
+            page_home
           )
         ),
         tablerTabItem(
-          tabName = "Test",
-          'PLACEHOLDER 2'
-      )
-
+          tabName = "Customers",
+          page_customers
       ),
+        tablerTabItem(
+          tabName = "Subscriptions",
+          page_subs
+      ),
+        tablerTabItem(
+          tabName = "Lessons",
+          page_lessons
+      ),
+        tablerTabItem(
+          tabName = "Automations",
+          page_automations
+      )
+    ),
+
+    # CSS CODE ------------------------------------------------
+
           tags$head(
     tags$style(HTML("
         .ml-auto, .mx-auto {
@@ -89,4 +110,7 @@
     }
     ")))      
     )
+
+   # END ------------------------------------------------
+
   )
