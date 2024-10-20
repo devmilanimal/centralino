@@ -1,0 +1,269 @@
+---
+title: "Untitled"
+format: html
+editor: visual
+---
+
+## GET DATA
+
+
+```{r}
+box::use(data.table[...],
+         duckdb[...],
+         googledrive[...],
+         lubridate[...],
+         DBI[...])
+
+con = dbConnect(duckdb::duckdb(), file.path('..', 'data', "production.duckdb"))
+
+
+dbGetQuery(con, "SELECT COUNT(*) AS total_records FROM anagrafica")
+
+
+DTS = dbGetQuery(con, "SELECT *  FROM anagrafica")
+setDT(DTS)
+DTS[, Start_Date := as.IDate(paste0(year(Sys.Date()) - ANNI_CLIENTE,'-', month(SCADENZA_ABBONAMENTO),'-01'), "%Y-%m-%d")]
+DTS[, Start_Date := format(ceiling_date(Start_Date, "month") - days(1), "%Y-%m-%d")]
+DTS[, RATA_SCADUTA := fcase(RATA < Sys.Date() + 15, 'LATE', 
+                            RATA > Sys.Date() + 15, 'OK')]
+DTS[, RATA_SCADUTA := fifelse(is.na(RATA_SCADUTA), 'NULL', RATA_SCADUTA)]
+
+DTS[, .N, by = 'RATA_SCADUTA'][RATA_SCADUTA != 'NULL']
+DTS = DTS[RATA >= Sys.Date() - 60 & RATA <= Sys.Date() + 60]
+
+```
+
+## REACTABLE
+
+```{r}
+library(reactable)
+library(reactablefmtr)
+library(htmltools)
+
+mlm_reactable_theme = reactableTheme(
+    color = '#3E4C52',
+    backgroundColor = 'white',
+    borderColor = "#dfe2e5",
+    stripedColor = "#f2f2f2",
+    highlightColor = "#e6e6e6",
+    headerStyle = list(fontSize = '10px', paddingTop = '10px', paddingBottom = '5px', backgroundColor = 'black', color = 'white', fontWeight = 'bold'),
+    cellStyle = list(fontFamily = "Helvetica, sans-serif", fontSize = '10px'),
+    style = list(fontFamily = "Helvetica, sans-serif", fontSize = '10px', color = '#3E4C52'),
+    searchInputStyle = list(width = "100%")
+)
+
+
+DTS[, ID_col := '#8CBEB2']
+DTS[, CINTURA_col := fcase(CINTURA == 'White', '#e6e6e6',
+                           CINTURA == 'Blue', '#0099DD',
+                           CINTURA == 'Purple', '#7275A6',
+                           CINTURA == 'Brown', '#736355',
+                           CINTURA == 'Black', '#242526')]
+
+DTS[, ATLETA_col := fcase(ATLETA == TRUE, '#C78880',
+                          ATLETA == FALSE, '#F2EBBF')]
+
+DTS[, SESSO_col := fcase(SESSO == 'M', '#94A69F',
+                         SESSO == 'F', '#F7D6D2')]
+
+DTS[, RATA_SCADUTA_col := fcase(RATA_SCADUTA == 'LATE', '#FFB807',
+                                RATA_SCADUTA == 'OK', '#A2A632',
+                                RATA_SCADUTA == 'NULL', '#DDDEC6')]
+
+DTS[, ATTIVO_col := fcase(ATTIVO == TRUE, '#26C4A5',
+                          ATTIVO == FALSE, '#D9753B')]
+
+setcolorder(DTS, neworder = c("ID", "NOME", 'COGNOME', "CINTURA", 'DATA_CINTURA', 'ATLETA', "TIPO_ABBONAMENTO", 'ATTIVO', "SCADENZA_ABBONAMENTO", 'RATA', 'RATA_SCADUTA', 'ANNI_CLIENTE'))
+
+reactable(DTS,
+          theme = mlm_reactable_theme,
+          highlight = TRUE,
+          outlined = FALSE,
+          compact = TRUE,
+          wrap = FALSE,
+          paginationType = "jump",
+          defaultPageSize = 12,
+          filterable = TRUE,
+          resizable = TRUE,
+          selection = "single",
+          onClick = "select",
+          defaultColDef = colDef(na = "–", minWidth = 70),
+          columns = list(
+              ID = colDef(sticky = 'left', cell = pill_buttons(data = DTS, color_ref = 'ID_col')),
+              ID_col = colDef(show = FALSE),
+              CINTURA = colDef(cell = pill_buttons(data = DTS, color_ref = 'CINTURA_col')),
+              CINTURA_col = colDef(show = FALSE),
+              ATLETA = colDef(cell = pill_buttons(data = DTS, color_ref = 'ATLETA_col')),
+              ATLETA_col = colDef(show = FALSE),
+              SESSO = colDef(cell = pill_buttons(data = DTS, color_ref = 'SESSO_col')),
+              SESSO_col = colDef(show = FALSE),
+              ATTIVO = colDef(cell = pill_buttons(data = DTS, color_ref = 'ATTIVO_col')),
+              ATTIVO_col = colDef(show = FALSE),
+              RATA_SCADUTA = colDef(cell = pill_buttons(data = DTS, color_ref = 'RATA_SCADUTA_col')),
+              RATA_SCADUTA_col = colDef(show = FALSE)
+          ),
+            columnGroups = list(
+                colGroup(name = "Personal", columns = c("ID", "NOME", 'COGNOME'), headerStyle = list(fontSize = '10px', paddingTop = '10px', paddingBottom = '5px', backgroundColor = 'black', color = 'white', fontWeight = 'bold')),
+                colGroup(name = "PASS", columns = c("TIPO_ABBONAMENTO", 'ATTIVO', "SCADENZA_ABBONAMENTO", 'RATA', 'RATA_SCADUTA', 'ANNI_CLIENTE'),
+                         headerStyle = list(fontSize = '10px', paddingTop = '10px', paddingBottom = '5px', backgroundColor = 'black', color = 'white', fontWeight = 'bold')),                
+                colGroup(name = "Details", columns = c('SESSO', 'NAZIONE', 'CODICE_FISCALE', 'EMAIL', 'TELEFONO', 'INDIRIZO', 'PROVINCIA', 'DATA_NASCITA', 'ETA', 'RELAZIONI_FAM'),
+                         headerStyle = list(fontSize = '10px', paddingTop = '10px', paddingBottom = '5px', backgroundColor = 'black', color = 'white', fontWeight = 'bold')),
+                                colGroup(name = "BJJ", columns = c("CINTURA", 'DATA_CINTURA', 'ATLETA'),
+                                         headerStyle = list(fontSize = '10px', paddingTop = '10px', paddingBottom = '5px', backgroundColor = 'black', color = 'white', fontWeight = 'bold')),
+                colGroup(name = "SOCIAL", columns = c('SOCIAL_INST', "FOTO"),
+                         headerStyle = list(fontSize = '10px', paddingTop = '10px', paddingBottom = '5px', backgroundColor = 'black', color = 'white', fontWeight = 'bold'))
+                )
+)
+
+```
+
+## PLOTS
+
+```{r}
+library(highcharter)
+
+```
+
+### Eta
+
+```{r}
+        DTS2 = DTS[, .N, by = .(CINTURA)]
+        DTS2[, CINTURA_ov := fcase(CINTURA == 'White', '1. White',
+                                  CINTURA == 'Blue', '2. Blue',
+                                  CINTURA == 'Purple', '3. Purple',
+                                  CINTURA == 'Brown', '4. Brown',
+                                  CINTURA == 'Black', '5. Black')]
+        ov_colors <- c("#e6e6e6","#0099DD", "#7275A6", "#736355", "#242526")
+        DTS2[, CINTURA_ov := as.character(CINTURA_ov)]
+        
+highchart() %>%
+  hc_chart(type = "bar", inverted = TRUE) %>%
+  hc_add_series(data = DTS2[order(CINTURA_ov)], name = "Count", type = "bar",
+                hcaes(x = CINTURA_ov, y = N), 
+                colorByPoint = TRUE) %>%
+  hc_colors(ov_colors) %>%
+  hc_xAxis(title = list(text = NULL), categories = DTS2[order(CINTURA_ov)]$CINTURA_ov) %>%
+  hc_yAxis(title = list(text = NULL), labels = list(format = '{value}')) %>%
+  hc_tooltip(pointFormat = 'Count: <b>{point.y}</b><br/>Category: {point.category}') %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_plotOptions(series = list(
+    borderRadius = 10,
+    borderWidth = 1,
+    showInLegend = FALSE
+  )) %>%
+  hc_exporting(enabled = TRUE)
+```
+
+
+## Nazione
+
+```{r}
+
+        DTS2 = DTS[, .N, by = ATLETA] 
+        DTS2 %>%
+            hchart(
+                "pie", hcaes(x = ATLETA, y = N),
+            ) %>%
+            hc_exporting(enabled = TRUE) %>% 
+            hc_xAxis(title = list(text = NULL), categories = DTS2[order(-ATLETA)]$ATLETA) %>%
+                        hc_colors(c('#26C4A5', '#D2E8E3')) %>%
+            hc_exporting(enabled = TRUE) 
+        
+highchart() %>% 
+  hc_add_series(DTS2, type = "pie", 
+                dataLabels = list(distance = '-30%', # <- this puts labels inside
+                                  backgroundColor = "white"),
+                hcaes(x = as.character(ATLETA), y = N))        
+```
+
+# Sesso
+```{r}
+dt_age[order(-Age_Group)][Age_Group != 'null'] %>%
+  e_charts(Age_Group) %>%
+  e_bar(N, name = "Count") %>%
+  e_title("") %>%
+  e_tooltip(axisPointer = list(type = "cross")) %>%
+  e_x_axis(name = 'Distribution of AGE (5-year clusters)') %>%
+  e_y_axis(name = "") %>% 
+  e_flip_coords() %>%
+  e_legend(FALSE) %>% 
+    e_theme_custom('{"color":["#94A69F","#F7D6D2"]}')
+
+highchart() %>%
+  hc_chart(type = "pie") %>%
+  hc_plotOptions(pie = list(
+    innerSize = "50%",  # Equivalent to radius = c("50%", "70%") in echarts4r
+    depth = 25,  # Adding some depth to mimic the 'donut' appearance
+    dataLabels = list(
+      enabled = TRUE,
+      format = '{point.name}: {point.y} ({point.percentage:.1f}%)',
+      distance = -30  # Positioning labels inside
+    )
+  )) %>%
+  hc_add_series(data = dt_age[order(-Age_Group)][Age_Group != 'null'], name = "Count", id = "gender", 
+                dataLabels = list(enabled = TRUE),
+                keys = c("Age_Group", "N")) %>%
+  hc_tooltip(pointFormat = '{series.Age_Group}: <b>{point.N}</b><br/>',
+             valueDecimals = 2, valueSuffix = '%') %>%
+  hc_exporting(enabled = TRUE)
+
+library(highcharter)
+
+# Generate sample data
+data <- data.frame(
+  category = c("A", "B", "C", "D"),
+  count = c(10, 20, 30, 40)
+)
+
+# Create a pie chart
+highchart() %>%
+  hc_chart(type = "pie") %>%  # Set the chart type to pie
+  hc_title(text = "Simple Pie Chart Example") %>%  # Add a title
+  hc_add_series(
+    data = data,
+    name = "Count",
+    dataLabels = list(
+      enabled = TRUE,  # Enable data labels
+      format = '{point.name}: {point.percentage:.1f}%'
+    )
+  ) %>%
+  hc_tooltip(pointFormat = '{series.name}: <b>{point.y} ({point.percentage:.1f}%)</b>') %>%  # Tooltip format
+  hc_plotOptions(
+    pie = list(
+      showInLegend = TRUE  # Display the legend
+    )
+  )
+
+    
+```
+
+
+## Belts
+```{r}
+library(highcharter)
+        DTS = DTS[, .N, by = .(CINTURA)]
+        DTS[, CINTURA_ov := fcase(CINTURA == 'White', '1. White',
+                                  CINTURA == 'Blue', '2. Blue',
+                                  CINTURA == 'Purple', '3. Purple',
+                                  CINTURA == 'Brown', '4. Brown',
+                                  CINTURA == 'Black', '5. Black')]
+        ov_colors <- c("#ffffff","#0099DD", "#7275A6", "#736355", "#242526")
+
+# Create a bar chart
+highchart() %>%
+  hc_chart(type = "bar", inverted = TRUE) %>%
+  hc_add_series(DTS, "bar", hcaes(x = CINTURA_ov, y = N), name = "Count",
+                colorByPoint = TRUE) %>%
+  hc_colors(ov_colors) %>%
+  hc_xAxis(title = list(text = NULL)) %>%
+  hc_yAxis(title = list(text = NULL), labels = list(format = '{value}')) %>%
+  hc_legend(enabled = FALSE) %>%
+  hc_plotOptions(series = list(
+      borderRadius = 10,
+    borderWidth = 1,
+    showInLegend = FALSE
+  )) %>%
+  hc_exporting(enabled = TRUE) 
+```
+
+
