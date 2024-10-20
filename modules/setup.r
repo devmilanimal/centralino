@@ -63,11 +63,11 @@ DBI::dbExecute(conn, 'USE my_db')
 
 ## App Sections =======================================================================================
 
-source(file.path("modules.R"))
+source(file.path('modules', "modules.R"))
 source(file.path('modules', "home.R"))
 source(file.path('modules', "customers.R"))
 source(file.path('modules', "subscriptions.R"))
 source(file.path('modules', "lessons.R"))
 source(file.path('modules', "automations.R"))
-source(file.path("main_ui.R"))
-source(file.path("server.R"))
+source(file.path('modules', "main_ui.R"))
+source(file.path('modules', "server.R"))

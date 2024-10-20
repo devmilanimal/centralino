@@ -69,7 +69,12 @@
     # BODY ------------------------------------------------
 
     body = tablerDashBody(
-#      chooseSliderSkin("Modern"),
+
+     chooseSliderSkin("Round"),
+      pushbar_deps(),
+      use_waiter(),
+      shinyjs::useShinyjs(),     
+
       tablerTabItems(
 
         tablerTabItem(
