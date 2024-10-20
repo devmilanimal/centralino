@@ -9,7 +9,7 @@ page_overview =
         sidebar = sidebar(
             title = NULL,
             open = 'open',
-            bg = 'white',
+            bg = '#f8fafc',
             width = '40vh',
             
             p('Select customers period:', style = 'font-weight:bold'),
@@ -26,7 +26,8 @@ page_overview =
                 label = 'Active:',
                 choices = c("ACTIVE" = TRUE, "NON ACTIVE" = FALSE),
                 selected = unique(c("ACTIVE" = TRUE, "NON ACTIVE" = FALSE)),
-                multiple = TRUE
+                multiple = TRUE,
+                selectize = FALSE
             ),
             textInput(
                 inputId = 'ov_name', 

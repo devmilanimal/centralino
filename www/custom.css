@@ -1,0 +1,31 @@
+body {
+    background-color: #f8fafc; 
+  }
+  
+/* Change the color of the slider track (before the handle) */
+.js-range-slider .irs-bar {
+    background-color: #313c52;
+    border-top: 1px solid #313c52;
+    border-bottom: 1px solid #313c52;
+  }
+  
+  /* Change the color of the entire slider track (both before and after the handle) */
+  .js-range-slider .irs-line {
+    background-color: #f1f5f9;
+    border: 1px solid #f1f5f9;
+  }
+  
+  /* Change the color of the handle (circle) */
+  .js-range-slider .irs-handle {
+    background-color: #313c52;
+    border: 1px solid #313c52;
+  }
+  
+  /* Change the color of the labels */
+  .js-range-slider .irs-single, 
+  .js-range-slider .irs-min, 
+  .js-range-slider .irs-max {
+    background-color: #313c52;
+    color: white;
+  }
+  

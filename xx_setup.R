@@ -6,28 +6,23 @@
 
 box::use(data.table[...],
          shiny[...],
-         googledrive[...],
-         waiter[...],
-         react[...],
          bslib[...],
          bsicons[...],
+         data.table[...],
+         magrittr[...],
+         react[...],
          highcharter[...],
          reactable[...],
-         reactablefmtr[...],
-         htmltools[...],
+         waiter[...],
          shinycssloaders[withSpinner],
-         magrittr[...],
-         openxlsx[...],
-         jsonlite[...],
-         lubridate[...],
-         duckdb[...],
+         shinyWidgets[...],
          DBI[...],
-         lubridate[...],
+         duckdb[...],
+         shinyjs[...],
          shinymanager[...]
-         
 )
 
-
+box::use(md = ./db_operations)
 
 ## App Options =======================================================================================
 
@@ -44,40 +39,54 @@ credentials = data.frame(
 
 
 
-## Connect to Google Drive API ======================================================================
+## Connect to DB ======================================================================
 
-googledrive::drive_auth(path = "ethereal-runner-333607-19d761b0b18d.json")
-file.remove("data/production.duckdb")
-drive_download(drive_get(id="1fF2lrk2OvvNER-SsnFqir4l26Yl4jzwG"), path = "data/production.duckdb", overwrite = TRUE)
-con = dbConnect(duckdb::duckdb(), file.path('data', "production.duckdb"))
-
+if(!exists('conn')) {
+    md$connect_md(store_conn = TRUE, apikey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImRldm1pbGFuaW1hbEBnbWFpbC5jb20iLCJzZXNzaW9uIjoiZGV2bWlsYW5pbWFsLmdtYWlsLmNvbSIsInBhdCI6Ijgyc0NzNy1tMnl4b1VWNG9ZYmhINU5rc2VJLVlmR3Q3azMwZ0o0T2pRWTQiLCJ1c2VySWQiOiIxNmM3MDlmMi1hYTYxLTQxYzgtOTM4OC01ZmMzNjc1MTRhMTgiLCJpc3MiOiJtZF9wYXQiLCJpYXQiOjE3Mjk0MjkzODd9.p0waIa4bRYQ-2DGrfK4Fa2CDgDV03gIoUzex3uySjqo')
+} else {
+    message(glue::glue("{crayon::bgGreen('[OK]')} MotherDuck DB Already connected."))
+}
+if(exists('conn')) {
+    check_db = md$check_database_md(conn, database_name = 'my_db')
+}
+if(exists('conn') & isTRUE(check_db)) {
+    check_dt_clients = md$check_table_md(conn, table_name = 'dt_clients_info', verbose = TRUE)
+}
+if(exists('conn') & isTRUE(check_db) & isTRUE(check_dt_clients)) {
+    DBI::dbExecute(conn, 'USE my_db')
+}
 
 
 ## Theme =======================================================================================
 
+shinyWidgets::chooseSliderSkin('Round', color = '#49566c')
+
 ### Dashboard
 mlm_theme = bs_theme(
-    # bootswatch = 'zephyr',
     version = 5,
-    font_scale = 0.8,
-    primary = "black",
+    font_scale = 1,
+    primary = "#313c52",  
+    secondary = '#9ba9be',
+    success = '#0ca678',
+    info = '#17a2b8',
+    warning = '#f59f00',
+    danger = '#d63939',
     base_font = font_google("Libre Franklin", local = TRUE),
     code_font = c("Courier", "monospace"),
     heading_font = font_google("Libre Franklin", wght = 900, local = TRUE),
 )
 
 
-
 ### Reactable
 mlm_reactable_theme = reactableTheme(
-    color = '#3E4C52',
-    backgroundColor = 'white',
-    borderColor = "#dfe2e5",
-    stripedColor = "#f2f2f2",
-    highlightColor = "#e6e6e6",
+    color = '#49566c',
+    backgroundColor = 'f8fafc',
+    borderColor = "#e2e8f0",
+    stripedColor = "#c8d3e1",
+    highlightColor = "#c8d3e1",
     headerStyle = list(fontSize = '12px', paddingTop = '10px', paddingBottom = '5px', color = '#242526', fontWeight = 'bold'),
-    cellStyle = list(fontFamily = "Helvetica, sans-serif", fontSize = '10px'),
-    style = list(fontFamily = "Helvetica, sans-serif", fontSize = '10px', color = '#3E4C52'),
+    cellStyle = list(fontFamily = "Inter, sans-serif", fontSize = '10px'),
+    style = list(fontFamily = "Inter, sans-serif", fontSize = '10px', color = '#49566c'),
     searchInputStyle = list(width = "100%")
 )
 
@@ -113,11 +122,9 @@ link_milanimal = tags$a(
 
 # Load App =======================================================================================
 
-paths = file.path('modules')
-
-source(file.path(paths, '00_functions.R'))
-source(file.path(paths, '01_z_overview.R'))
-source(file.path(paths, '01_z_table_newcustomermodal.R'))
-source(file.path(paths, '01_z_table.R'))
-source(file.path(paths, '01_ui.R'))
-source(file.path(paths, '02_server.R'))
+source(file.path('00_functions.R'))
+source(file.path('01_z_overview.R'))
+source(file.path('01_z_table_newcustomermodal.R'))
+source(file.path('01_z_table.R'))
+source(file.path('01_ui.R'))
+source(file.path('02_server.R'))

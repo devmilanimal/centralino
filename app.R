@@ -3,14 +3,15 @@
 # : ========================================================================================================================================================
 
 suppressMessages(suppressWarnings(
-    source(file.path('modules', "xx_setup.R"))))
+    source(file.path("xx_setup.R"))))
 
 
 # App ===============================================================
 
 shinyApp(
     
-    ui = secure_app(ui_app),
+#    ui = secure_app(ui_app),
+    ui = ui_app,
     server = server_app
     
 )

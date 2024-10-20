@@ -5,91 +5,23 @@ server_app = function(input, output, session) {
     
     ### Login
     
-    res_auth = secure_server(
-        check_credentials = check_credentials(credentials)
-    )
-    
-    ### Download locally the DuckDB from Google Drive
-    
-    conn = reactiveVal(con)
-    
-    ### Retrieve DB from Drive
-    observeEvent(input$act_tbl_retrievedb, {
-        if(!file.exists(file.path('data', "production.duckdb"))){
-            waiter_show(html = tagList(
-                spin_fading_circles(),
-                br(),
-                "Loading data... Please wait.")
-            )
-        drive_download(drive_get(id="1fF2lrk2OvvNER-SsnFqir4l26Yl4jzwG"), path = "data/production.duckdb", overwrite = TRUE)
-        con = dbConnect(duckdb::duckdb(), file.path('data', "production.duckdb"))
-        conn(con)
-            waiter_hide()
-        } else {
-            file.remove("data/production.duckdb")
-            waiter_show(html = tagList(
-                spin_fading_circles(),
-                br(),
-                "Loading data... Please wait.")
-            )
-            drive_download(drive_get(id="1fF2lrk2OvvNER-SsnFqir4l26Yl4jzwG"), path = "data/production.duckdb", overwrite = TRUE)
-            con = dbConnect(duckdb::duckdb(), file.path('data', "production.duckdb"))
-            conn(con)
-            waiter_hide()
-        }
-    })
-    
-    ### Upload Backup DB to Drive
-    observeEvent(input$act_tbl_backupdb, {
-        # req(react$conn)
-        
-        if (is.null(react$conn)) {
-            showModal(modalDialog(
-                title = "Warning",
-                "Warning, you need to retrieve the DB first.",
-                footer = modalButton("Close")
-            ))} else {
-        
-        waiter_show(html = tagList(
-            spin_fading_circles(),
-            br(),
-            "Uploading backup data... Please wait.")
-        )
-        con = react$conn
-        dbDisconnect(con)
-        
-        backupdate = paste0('mlm-', Sys.Date(), '-backup', '.duckdb')
-        uploaded_file = drive_upload(media = 'data/production.duckdb',
-                                     name = backupdate,
-                                     path = as_id('14EoCWBgMPJ96KRuvqcjf4p2n5m8k-DyT'))
-        
-        con = dbConnect(duckdb::duckdb(), file.path('data', "production.duckdb"))
-        conn(con)
-        
-        waiter_hide()
-        
-        showNotification(
-            paste("Backup DB completed"),
-            type = "warning",
-            duration = 1500  # Notification duration in milliseconds
-        )
-            }
-        
-    })
+  #  res_auth = secure_server(
+  #      check_credentials = check_credentials(credentials)
+  #  )
     
     ### Load DB
     DTW = reactiveVal(NULL)
     
     observe({
-        req(react$conn)
-        con = react$conn
-        DTS = dbGetQuery(con, "SELECT *  FROM anagrafica")
+        
+        con = conn
+        DTS = dbGetQuery(con, "SELECT *  FROM dt_clients_info")
         setDT(DTS)
-        DTS[, Start_Date := as.IDate(paste0(year(Sys.Date()) - ANNI_CLIENTE,'-', month(SCADENZA_ABBONAMENTO),'-01'), "%Y-%m-%d")]
-        DTS[, Start_Date := format(ceiling_date(Start_Date, "month") - days(1), "%Y-%m-%d")]
-        DTS[, RATA_SCADUTA := fcase(RATA < Sys.Date() + 15, 'LATE', 
-                                    RATA > Sys.Date() + 15, 'OK')]
-        DTS[, RATA_SCADUTA := fifelse(is.na(RATA_SCADUTA), 'NULL', RATA_SCADUTA)]
+#        DTS[, Start_Date := as.IDate(paste0(year(Sys.Date()) - ANNI_CLIENTE,'-', month(SCADENZA_ABBONAMENTO),'-01'), "%Y-%m-%d")]
+#        DTS[, Start_Date := format(ceiling_date(Start_Date, "month") - days(1), "%Y-%m-%d")]
+#        DTS[, RATA_SCADUTA := fcase(RATA < Sys.Date() + 15, 'LATE', 
+#                                    RATA > Sys.Date() + 15, 'OK')]
+#        DTS[, RATA_SCADUTA := fifelse(is.na(RATA_SCADUTA), 'NULL', RATA_SCADUTA)]
         DTW(DTS)
     })
     
@@ -111,7 +43,7 @@ server_app = function(input, output, session) {
         
         DTS = copy(react$DTW)
         # DTS = DTS[RATA_SCADUTA >= as.Date(input$ov_customer_range[1]) & RATA_SCADUTA <= as.Date(input$ov_customer_range[2])]
-        DTS = DTS[RATA >= as.Date(input$ov_customer_range[1]) & RATA <= as.Date(input$ov_customer_range[2])]
+#        DTS = DTS[RATA >= as.Date(input$ov_customer_range[1]) & RATA <= as.Date(input$ov_customer_range[2])]
         
         table_customer_ov_business(DTS)
     })     
@@ -196,8 +128,8 @@ server_app = function(input, output, session) {
     
     
     observeEvent(input$act_tbl_filter_ov, {
-        # req(react$conn)
-        if (is.null(react$conn)) {
+        # 
+        if (is.null(conn)) {
             showModal(modalDialog(
                 title = "Warning",
                 "Warning, you need to retrieve the DB first.",
@@ -309,8 +241,8 @@ server_app = function(input, output, session) {
     })
     
     observeEvent(input$act_tbl_filter, {
-        # req(react$conn)
-        if (is.null(react$conn)) {
+        # 
+        if (is.null(conn)) {
             showModal(modalDialog(
                 title = "Warning",
                 "Warning, you need to retrieve the DB first.",
@@ -411,7 +343,7 @@ server_app = function(input, output, session) {
     
     observeEvent(input$act_tbl_modifycustomer, {
         
-        if (is.null(react$conn)) {
+        if (is.null(conn)) {
             showModal(modalDialog(
                 title = "Warning",
                 "Warning, you need to retrieve the DB first.",
@@ -432,11 +364,11 @@ server_app = function(input, output, session) {
     
     observeEvent(input$confirm_modification, {
         
-        con = react$conn
+        con = conn
         value_to_modify = input$id_modify
         before_mod = react$DTW[ID %in% value_to_modify]
         customer_tomodify(react$DTW[ID %in% value_to_modify])
-        sql_command <- sprintf("DELETE FROM anagrafica WHERE ID = '%s'", value_to_modify)
+        sql_command <- sprintf("DELETE FROM dt_clients_info WHERE ID = '%s'", value_to_modify)
         dbExecute(con, sql_command)
         
         tbl_customer_select(NULL)
@@ -504,8 +436,8 @@ server_app = function(input, output, session) {
             RATA = cust_rata
         )
 
-        con = react$conn
-        sql_command = sprintf("INSERT INTO anagrafica (ID, NOME, COGNOME, CODICE_FISCALE, EMAIL, TELEFONO, INDIRIZO, PROVINCIA, DATA_NASCITA, ETA, CINTURA, DATA_CINTURA, ATLETA, RELAZIONI_FAM, NAZIONE, SESSO, TIPO_ABBONAMENTO, SCADENZA_ABBONAMENTO, ANNI_CLIENTE, ATTIVO, SOCIAL_INST, FOTO, RATA) VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, '%s', '%s', %s, '%s', '%s', '%s', '%s', '%s', %d, %s, '%s', '%s', '%s');",
+        con = conn
+        sql_command = sprintf("INSERT INTO dt_clients_info (ID, NOME, COGNOME, CODICE_FISCALE, EMAIL, TELEFONO, INDIRIZO, PROVINCIA, DATA_NASCITA, ETA, CINTURA, DATA_CINTURA, ATLETA, RELAZIONI_FAM, NAZIONE, SESSO, TIPO_ABBONAMENTO, SCADENZA_ABBONAMENTO, ANNI_CLIENTE, ATTIVO, SOCIAL_INST, FOTO, RATA) VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, '%s', '%s', %s, '%s', '%s', '%s', '%s', '%s', %d, %s, '%s', '%s', '%s');",
                               newcustomer_data[[1, "ID"]], newcustomer_data[[1, "NOME"]], newcustomer_data[[1, "COGNOME"]], newcustomer_data[[1, "CODICE_FISCALE"]],
                               newcustomer_data[[1, "EMAIL"]], newcustomer_data[[1, "TELEFONO"]], newcustomer_data[[1, "INDIRIZZO"]], newcustomer_data[[1, "PROVINCIA"]],
                               format(newcustomer_data[[1, "DATA_NASCITA"]], "%Y-%m-%d"), as.integer(newcustomer_data[[1, "ETA"]]), newcustomer_data[[1, "CINTURA"]], format(newcustomer_data[[1, "DATA_CINTURA"]], "%Y-%m-%d"),
@@ -515,7 +447,7 @@ server_app = function(input, output, session) {
 
         # Execute the SQL command
         dbExecute(con, sql_command)
-        DTS = dbGetQuery(con, "SELECT *  FROM anagrafica")
+        DTS = dbGetQuery(con, "SELECT *  FROM dt_clients_info")
 
         DTW(DTS)
         table_customer_cd(DTS)
@@ -543,7 +475,7 @@ server_app = function(input, output, session) {
     ### Delete customer -------------------------------------------
     observeEvent(input$act_tbl_deletecustomer, {
         
-        if (is.null(react$conn)) {
+        if (is.null(conn)) {
             showModal(modalDialog(
                 title = "Warning",
                 "Warning, you need to retrieve the DB first.",
@@ -570,15 +502,15 @@ server_app = function(input, output, session) {
             br(),
             "Deleting data... Please wait.")
         )
-        con = react$conn
+        con = conn
         value_to_delete = input$id_delete
-        sql_command <- sprintf("DELETE FROM anagrafica WHERE ID = '%s'", value_to_delete)
+        sql_command <- sprintf("DELETE FROM dt_clients_info WHERE ID = '%s'", value_to_delete)
         dbExecute(con, sql_command)
         
         tbl_customer_select(NULL)
         table_customer_cd_selected(NULL)
         
-        DTS = dbGetQuery(con, "SELECT *  FROM anagrafica")
+        DTS = dbGetQuery(con, "SELECT *  FROM dt_clients_info")
         
         DTW(DTS)
         table_customer_cd(DTS)
@@ -606,7 +538,7 @@ server_app = function(input, output, session) {
     
     observeEvent(input$act_tbl_addcustomer, {
         
-        if (is.null(react$conn)) {
+        if (is.null(conn)) {
             showModal(modalDialog(
                 title = "Warning",
                 "Warning, you need to retrieve the DB first.",
@@ -672,9 +604,9 @@ server_app = function(input, output, session) {
             RATA = cust_rata
     )
         
-        con = react$conn
+        con = conn
         
-        sql_command = sprintf("INSERT INTO anagrafica (ID, NOME, COGNOME, CODICE_FISCALE, EMAIL, TELEFONO, INDIRIZO, PROVINCIA, DATA_NASCITA, ETA, CINTURA, DATA_CINTURA, ATLETA, RELAZIONI_FAM, NAZIONE, SESSO, TIPO_ABBONAMENTO, SCADENZA_ABBONAMENTO, ANNI_CLIENTE, ATTIVO, SOCIAL_INST, FOTO, RATA) VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, '%s', '%s', %s, '%s', '%s', '%s', '%s', '%s', %d, %s, '%s', '%s', '%s');",
+        sql_command = sprintf("INSERT INTO dt_clients_info (ID, NOME, COGNOME, CODICE_FISCALE, EMAIL, TELEFONO, INDIRIZO, PROVINCIA, DATA_NASCITA, ETA, CINTURA, DATA_CINTURA, ATLETA, RELAZIONI_FAM, NAZIONE, SESSO, TIPO_ABBONAMENTO, SCADENZA_ABBONAMENTO, ANNI_CLIENTE, ATTIVO, SOCIAL_INST, FOTO, RATA) VALUES ('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', %d, '%s', '%s', %s, '%s', '%s', '%s', '%s', '%s', %d, %s, '%s', '%s', '%s');",
                               newcustomer_data[[1, "ID"]], newcustomer_data[[1, "NOME"]], newcustomer_data[[1, "COGNOME"]], newcustomer_data[[1, "CODICE_FISCALE"]],
                               newcustomer_data[[1, "EMAIL"]], newcustomer_data[[1, "TELEFONO"]], newcustomer_data[[1, "INDIRIZZO"]], newcustomer_data[[1, "PROVINCIA"]],
                               format(newcustomer_data[[1, "DATA_NASCITA"]], "%Y-%m-%d"), as.integer(newcustomer_data[[1, "ETA"]]), newcustomer_data[[1, "CINTURA"]], format(newcustomer_data[[1, "DATA_CINTURA"]], "%Y-%m-%d"),
@@ -684,7 +616,7 @@ server_app = function(input, output, session) {
         
         # Execute the SQL command
         dbExecute(con, sql_command)        
-        DTS = dbGetQuery(con, "SELECT *  FROM anagrafica")
+        DTS = dbGetQuery(con, "SELECT *  FROM dt_clients_info")
         
         DTW(DTS)
         table_customer_cd(DTS)
